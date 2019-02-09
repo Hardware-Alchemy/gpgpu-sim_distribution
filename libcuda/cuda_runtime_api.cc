@@ -101,6 +101,9 @@
  * the above Disclaimer and U.S. Government End Users Notice.
  */
 
+#define __ZHENG_DEBUG__
+#define __ZHENG_HACK__
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -2051,8 +2054,17 @@ static int get_app_cuda_version() {
     snprintf(fname,1024,"_app_cuda_version_XXXXXX");
     int fd=mkstemp(fname);
     close(fd);
-    std::string app_cuda_version_command = "ldd " + get_app_binary() + " | grep libcudart.so | sed  's/.*libcudart.so.\\(.*\\) =>.*/\\1/' > " + fname;
-    system(app_cuda_version_command.c_str());
+    
+	// Debug Code: Helps to identify which app binary is called
+#ifdef __ZHENG_DEBUG__
+	std::string app_bin_ = get_app_binary();
+	std::string app_cuda_version_command = "ldd " + app_bin_ + " | grep libcudart.so | sed  's/.*libcudart.so.\\(.*\\) =>.*/\\1/' > " + fname;
+    std::cout << "ZHENG DEBUG: \n" << "get_app_binary() returns \t" << app_bin_ << std::endl;
+#else
+	std::string app_cuda_version_command = "ldd " + get_app_binary() + " | grep libcudart.so | sed  's/.*libcudart.so.\\(.*\\) =>.*/\\1/' > " + fname;
+#endif
+	
+	system(app_cuda_version_command.c_str());
     FILE * cmd = fopen(fname, "r");
     char buf[256];
     while (fgets(buf, sizeof(buf), cmd) != 0) {
@@ -2060,7 +2072,16 @@ static int get_app_cuda_version() {
         app_cuda_version = atoi(buf);
     }
     fclose(cmd);
-    if ( app_cuda_version == 0 ) {
+
+#ifdef __ZHENG_DEBUG__
+    std::cout << "ZHENG DEBUG: \n" << "app_cuda_version is \t" << app_cuda_version << std::endl;
+#endif
+
+#ifdef __ZHENG_HACK__
+	app_cuda_version = 8;
+#endif
+
+	if ( app_cuda_version == 0 ) {
         printf( "Error - Cannot detect the app's CUDA version.\n" );
         exit(1);
     }
